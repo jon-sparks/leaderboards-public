@@ -7,88 +7,75 @@ const pool = new Pool()
 const client = new Client()
 
 //Selects
-const getDrivers = (request, response) => {
-  pool.query(`select d.id, d.first_name, d.last_name, d.category, t.name as team
+const getDrivers = _ => 
+  pool.query(`select d.id, d.first_name, d.last_name, d.category, d.deleted_on, t.name as team,
+	SUM(
+		CASE 
+			WHEN res.position = 1 THEN 1
+		ELSE 
+			null 
+		END
+	) as total_wins 
   from "Drivers" as d
   left join "Teams" as t
   on d.team_id = t.ID
+  left join "Results" as res
+  on d.id = res.driver_id
   where d.deleted_on is null
-  order by d.category`, (error, results) => {
-    if (error) {
-      throw error
-    }
-    response.json(results.rows)
-  })
-}
-const getTeams = (request, response) => {
-  pool.query(`select * from "Teams"
-  where deleted_on is null`, (error, results) => {
-    if (error) {
-      throw error
-    }
-    response.json(results.rows)
-  })
-}
-const getSeasons = (request, response) => {
-  const query = `select * from "Seasons"`
+  group by d.id, t.name
+  order by d.category`)
 
-  pool.query(query, (error, results) => {
-    if (error) {
-      throw error
-    }
-    response.json(results.rows)
-  })
-}
-const getEvents = (request, response) => {
+const getTeams = _ => 
+  pool.query(`select t.name as name, t.id, SUM(
+		CASE 
+			WHEN res.position = 1 THEN 1
+		ELSE 
+			null 
+		END
+	) as total_wins 
+  from "Teams" as t
+  left join "Drivers" as d
+  on t.id = d.team_id
+  left join "Results" as res
+  on d.id = res.driver_id
+  where t.deleted_on is null
+  group by t.name, t.id`)
+
+const getSeasons = _ => 
+  pool.query(`select * from "Seasons"`)
+
+const getEvents = ({year}) => {
   const query = `select e.id, e.round, e.track from "Events" as e
   left join "Seasons" as s
   on s.id = season_id
   where s.year = $1`
 
-  const queryData = [request.params.year]
-
-  pool.query(query, queryData, (error, results) => {
-    if (error) {
-      throw error
-    }
-    response.json(results.rows)
-  })
+  return pool.query(query, [year]) 
 }
-const getRaces = (request, response) => {
+
+const getRaces = ({id}) => {
   const query = `select r.id as race_id, r.is_final, r.heat from "Races" as r
   left join "Events" as e
   on r.event_id = e.id
   where e.id = $1
   order by r.heat`
 
-  const queryData = [request.params.id]
-
-  pool.query(query, queryData, (error, results) => {
-    if (error) {
-      throw error
-    }
-    response.json(results.rows)
-  })
+  return pool.query(query, [id])
 }
-const getResults = (request, response) => {
-  const query = `select * from "Results" as res
+const getResults = ({id}) => {
+  const query = `select d.first_name, d.last_name, d.category, t.name as team_name, r.is_final, r.heat, res.position, res.id from "Results" as res
   left join "Races" as r
   on res.race_id = r.id
   left join "Drivers" as d
   on res.driver_id = d.id
+  left join "Teams" as t
+  on d.team_id = t.id
   where r.id = $1 and d.deleted_on is null
   order by res.position asc`
 
-  const queryData = [request.params.id]
-
-  pool.query(query, queryData, (error, results) => {
-    if (error) {
-      throw error
-    }
-    response.json(results.rows)
-  })
+  return pool.query(query, [id])
 }
-const getSeasonStandings = (request, response) => {
+const getSeasonStandings = ({year}) => {
   const query = `select d.first_name, d.last_name, d.category, t.name as team_name, SUM((p.points->>res.position)::int) as score from "Results" as res
   left join "Races" as r
   on res.race_id = r.id
@@ -102,96 +89,113 @@ const getSeasonStandings = (request, response) => {
   on r.points_id = p.id
   left join "Seasons" as s
 	on e.season_id = s.id
-	where r.is_final is true and e.season_id = 1 and s.year = $1
+	where r.is_final is true and s.year = $1
   group by d.id, t.name
   order by score desc`
 
-  const queryData = [request.params.year]
-
-  pool.query(query, queryData, (error, results) => {
-    if (error) {
-      throw error
-    }
-    response.json(results.rows)
-  })
+  return pool.query(query, [year])
 }
-const getTeamStandings = (request, response) => {
-  const query = `with driver_scores as (
-    select d.first_name, d.last_name, t.name as team_name, SUM((p.points->>res.position)::int) as score from "Results" as res
-    left join "Races" as r
-    on res.race_id = r.id
-    left join "Drivers" as d
-    on res.driver_id = d.id
-    left join "Teams" as t
-    on t.id = d.team_id
-    left join "Events" as e
-    on r.event_id = e.id
-    left join "Points" as p
-    on r.points_id = p.id
-    left join "Seasons" as s
-    on e.season_id = s.id
-    where r.is_final is true and e.season_id = 1 and s.year = $1
-    group by d.id, t.name
-    order by score desc
-  ) 
-  select team_name, sum(score) from driver_scores
-  group by team_name`
+const getTeamStandings = ({year}) => {
+  // Initial query
+  // const query = `with driver_scores as (
+  //   select d.first_name, d.last_name, t.name as team_name, SUM((p.points->>res.position)::int) as score from "Results" as res
+  //   left join "Races" as r
+  //   on res.race_id = r.id
+  //   left join "Drivers" as d
+  //   on res.driver_id = d.id
+  //   left join "Teams" as t
+  //   on t.id = d.team_id
+  //   left join "Events" as e
+  //   on r.event_id = e.id
+  //   left join "Points" as p
+  //   on r.points_id = p.id
+  //   left join "Seasons" as s
+  //   on e.season_id = s.id
+  //   where r.is_final is true and s.year = $1 and t.deleted_on is null
+  //   group by d.id, t.name
+  //   order by score desc
+  // ) 
+  // select team_name, sum(score) from driver_scores
+  // group by team_name
+  // order by sum desc`
 
-  const queryData = [request.params.year]
+  // New query
+  const query = `with ranked_teams as (
+    select rank_filter.* from (
+      with driver_scores as (
+        select d.first_name, d.last_name, t.name as team_name, SUM((p.points->>res.position)::int) as score from "Results" as res
+        left join "Races" as r
+        on res.race_id = r.id
+        left join "Drivers" as d
+        on res.driver_id = d.id
+        left join "Teams" as t
+        on t.id = d.team_id
+        left join "Events" as e
+        on r.event_id = e.id
+        left join "Points" as p
+        on r.points_id = p.id
+        left join "Seasons" as s
+        on e.season_id = s.id
+        where r.is_final is true and s.year = $1 and t.deleted_on is null
+        group by d.id, t.name
+        order by score desc
+      )
+      select score, team_name,
+        rank() OVER(
+          partition by team_name
+          order by score desc
+        )
+      from driver_scores
+    ) rank_filter WHERE RANK < 4
+  )
+  select team_name, sum(score) from ranked_teams
+  group by team_name
+  order by sum desc`
 
-  pool.query(query, queryData, (error, results) => {
-    if (error) {
-      throw error
-    }
-    response.json(results.rows)
-  })
+  return pool.query(query, [year])
+}
+const getEmptyRaces = _ => 
+  pool.query(`select e.id as event_id, e.track, e.season_id, e.round, s.year, r.id as race_id, r.is_final, r.heat as heat, res.id as results_id from "Events" as e
+  left join "Seasons" as s
+  on e.season_id = s.id
+  left join "Races" as r
+  on e.id = r.event_id
+  left join "Results" as res
+  on r.id = res.race_id
+  where res.id is null
+  order by s.year asc, round asc, heat asc`)
+
+const getRaceDrivers = ({id}) => {
+  const query = `select e.driver_ids, e.id as event_id, array_agg(d.first_name) as first_names, array_agg(d.last_name) as last_names from "Events" as e
+  left join "Drivers" as d
+  on d.id = any(e.driver_ids)
+  where e.id = $1
+  group by event_id`
+
+  return pool.query(query, [id])
 }
 
 //Inserts
-const insertDriver = (req, res) => {
+const insertDriver = ({firstName, lastName, category, team}) => {
+  const data = [firstName, lastName, category, team]
   const query = `INSERT INTO "Drivers"(first_name, last_name, category, team_id) VALUES($1, $2, $3, $4) RETURNING *;`
-  const formData = [req.body.firstName, req.body.lastName, req.body.category, req.body.team]
-  pool.query(query, formData, (err, res) => {
-    if (err) {
-      console.log(err.stack)
-    } else {
-      // console.log(res.rows[0])
-    }
-  })
-  res.status(200).send(req.body);
+  return pool.query(query, data)
 }
-const insertTeam = (req, res) => {
+
+const insertTeam = ({name}) => {
   const query = `INSERT INTO "Teams"(name) VALUES($1) RETURNING *;`
-  const formData = [req.body.name]
-  pool.query(query, formData, (err, res) => {
-    if (err) {
-      console.log(err.stack)
-    } else {
-      console.log(res.rows[0])
-    }
-  })
-  res.status(200).send(req.body);
+  return pool.query(query, [name])
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+const insertRaceResults = data => {
+  console.log(Object.values(data))
+  const query = format(`INSERT INTO "Results"(race_id, driver_id, position) VALUES %L`, Object.values(data))
+  console.log(query)
+  return pool.query(query)
+}
 
 
 const insertEvent = (req, res) => {
-
-
-
   pool.connect((err, client, done) => {
     const shouldAbort = err => {
       if (err) {
@@ -208,13 +212,13 @@ const insertEvent = (req, res) => {
     }
 
     const insertEventSql = `
-  INSERT INTO "Events" (track, driver_ids, season_id, round) VALUES ($1, $2, $3, $4)
+  INSERT INTO "Events" (track, driver_ids, season_id, round, date) VALUES ($1, $2, $3, $4, $5)
   RETURNING id as new_event_id`
 
     // BEGIN transaction
     client.query('BEGIN', err => {
 
-      const formData = [req.body.trackName, req.body.selectedDrivers, req.body.selectedSeason.id, req.body.noOfRounds];
+      const formData = [req.body.trackName, req.body.selectedDrivers, req.body.selectedSeason.id, req.body.noOfRounds, req.body.date];
       const heats = req.body.noOfHeats;
       let newEventId;
       console.log(formData)
@@ -229,13 +233,13 @@ const insertEvent = (req, res) => {
         }
 
         // Prepare the Race data, using the event ID from above
-        const raceData = []
+        const raceData = [[newEventId, true, null, 1]]
 
         for (let i = 1; i <= heats; i++) {
-          raceData.push([newEventId, false, i])
+          raceData.push([newEventId, false, i, 1])
         }
 
-        const insertRaceSql = format(`INSERT INTO "Races" (event_id, is_final, heat) VALUES %L`, raceData)
+        const insertRaceSql = format(`INSERT INTO "Races" (event_id, is_final, heat, points_id) VALUES %L`, raceData)
 
         // INSERT the Race
         client.query(insertRaceSql, (err, res) => {
@@ -272,35 +276,17 @@ const insertEvent = (req, res) => {
 
 
 //Deletes
-const deleteDriver = (req, res) => {
+const deleteDriver = ({id}) => {
   const query = `UPDATE "Drivers"
   SET deleted_on = CURRENT_DATE
   where id = $1`
-  const driverData = [req.body.id]
-  console.log(driverData)
-  pool.query(query, driverData, (err, res) => {
-    if (err) {
-      console.log(err.stack)
-    } else {
-      // console.log(res.rows[0])
-    }
-  })
-  res.status(200).send(req.body);
+  return pool.query(query, [id])
 }
-const deleteTeam = (req, res) => {
+const deleteTeam = ({id}) => {
   const query = `UPDATE "Teams"
   SET deleted_on = CURRENT_DATE
   where id = $1;`
-  const teamData = [req.body.id]
-  console.log(teamData)
-  pool.query(query, teamData, (err, res) => {
-    if (err) {
-      console.log(err.stack)
-    } else {
-      // console.log(res.rows[0])
-    }
-  })
-  res.status(200).send(req.body);
+  return pool.query(query, [id])
 }
 
 
@@ -313,6 +299,9 @@ module.exports = {
   getResults,
   getSeasonStandings,
   getTeamStandings,
+  getEmptyRaces,
+  getRaceDrivers,
+  insertRaceResults,
   insertDriver,
   insertTeam,
   insertEvent,

@@ -1,36 +1,25 @@
 import React, { useState, useEffect, useContext, Fragment } from 'react'
-import { Table, AddButton, FlexForm, FormRow, FormItem } from './styled/styled'
+import Loader from 'react-loader-spinner'
+import { Table, AddButton, FlexForm, FormItem, FlexRow, TableWrapper, blue } from './styled/styled'
 import { AccountContext } from './login/Accounts'
+import { GlobalContext } from './GlobalContext'
 
 function TeamTable(props) {
 
-    const accountState = useContext(AccountContext)
+    const { status } = useContext(AccountContext)
+
+    const { teams, teamsLoading, addNewTeam, removeTeamFromState, fetchTeams } = useContext(GlobalContext)
 
     const [formData, setFormData] = useState({
         name: ''
     })
     const [addTeam, setAddTeam] = useState(false)
 
-    // async function fetchDrivers() {
-    //     await fetch(`/api/drivers`)
-    //         .then(response => response.json())
-    //         .then(data => {
-    //         props.driverHandler(data)
-    //     })
-    // }
-
-    async function fetchTeams() {
-        await fetch(`/api/teams`)
-            .then(response => response.json())
-            .then(data => {
-            props.teamHandler(data)
-        })
-    }
-    
     useEffect(() => {
-        if(props.teams.length < 1){
+        if(teams.length < 1){
             fetchTeams() 
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     const handleInputChange = e => {
@@ -63,11 +52,11 @@ function TeamTable(props) {
                 body: JSON.stringify({"id":teamId})
             })
             .then(response => response.json())
-            .then(() => props.removeTeamFromState(teamId))
+            .then(() => removeTeamFromState(teamId))
     }
 
     const handleAddTeam = () => {
-        if(props.teams.length < 1){
+        if(teams.length < 1){
             fetchTeams()
         }
         setAddTeam(addTeam ? false : true)
@@ -93,45 +82,74 @@ function TeamTable(props) {
         </FormItem>
 
 
-        <button onClick={(e) => {props.addTeam(e, formData); insertTeam(e); handleAddTeam()}}>add team</button>
+        <AddButton onClick={(e) => {addNewTeam(e, formData); insertTeam(e); handleAddTeam()}}>add team</AddButton>
     </FlexForm>
     
 
     return (
         <Fragment>
 
-            <Table>
-                <thead>
-                    <tr>
-                        <th>Team name</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {
-                        props.teams.map((team, index) => 
-                        <tr key={team.id}>
-                            <td>{team.name}</td>
-                            <td>
-                                <button
-                                    data-key={team.id}
-                                    data-name={team.name}
-                                    onClick={(e) => handleDelete(e)}>
-                                    Delete
-                                </button> 
-                            </td>
-                        </tr>)
-                    }
-                </tbody>
-            </Table>
+            <FlexRow>
+                <TableWrapper>
+                    <Table>
+                        <thead>
+                            <tr>
+                                <th>Team name</th>
+                                <th>Race wins</th>
+                                {status && <th></th>}
+                            </tr>
+                        </thead>
+                        {
+                            teamsLoading ?
+                            <tbody>
+                                <tr>
+                                    <td colSpan="5">
+                                        <Loader
+                                            type="Bars"
+                                            color={blue}
+                                            height={60}
+                                            width={80}
+                                            style={{textAlign:'center',padding:'50px'}}
+                                        /> 
+                                    </td>
+                                </tr>
+                            </tbody> :
+                            <tbody>
+                                {
+                                    teams.map((team, index) => 
+                                    <tr key={team.id}>
+                                        <td>{team.name}</td>
+                                        <td style={{textAlign:'center'}}>{team.total_wins ? team.total_wins : '0'}</td>
+                                        {
+                                            status &&
+                                            <td>
+                                                <button
+                                                    data-key={team.id}
+                                                    data-name={team.name}
+                                                    onClick={(e) => handleDelete(e)}>
+                                                    Delete
+                                                </button> 
+                                            </td>
+                                        }
 
-            {accountState.status ? <AddButton onClick={handleAddTeam}>Add a team</AddButton> : ''}
+                                    </tr>)
+                                }
+                            </tbody>
+                        }
 
-
+                    </Table>
+                </TableWrapper>
+            </FlexRow>
             
-            {addTeam
-                ? teamForm
-                : ''
+
+            {
+                status &&
+                <AddButton onClick={handleAddTeam}>Add a team</AddButton>
+            }
+            
+            {
+                addTeam &&
+                teamForm
             }
 
         </Fragment>

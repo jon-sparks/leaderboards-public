@@ -1,15 +1,26 @@
 import React, { useState, useEffect, useContext, Fragment } from 'react'
 import { GlobalContext } from './GlobalContext'
-import { Fieldset, InlineFieldset, Label, Input, Legend, FormSubtitle, Radio, RadioLabel } from './styled/styled'
+import { InlineFieldset, Label, Input, FormSubtitle, Radio, RadioLabel, DriverCheckbox, EventForm, AddButton } from './styled/styled'
 
-function NewEvent() {
+function NewEvent({ fetchEmptyRaces, setNewEventToggle }) {
 
-    const { seasons, setSeasons, drivers, setDrivers } = useContext(GlobalContext)
+    const { seasons, fetchSeasons, drivers, fetchDrivers } = useContext(GlobalContext)
     const [selectedSeason, setSelectedSeason] = useState({})
     const [noOfRounds, setNoOfRounds] = useState(0)
     const [trackName, setTrackName] = useState('')
     const [noOfHeats, setNoOfHeats] = useState(0)
     const [selectedDrivers, setSelectedDrivers] = useState([])
+    const [date, setDate] = useState(null)
+
+    useEffect(() => {
+        if(drivers.length < 1){
+            fetchDrivers()
+        }
+        if(seasons.length < 1){
+            fetchSeasons()
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     const handleSeason = e => {
         setSelectedSeason(
@@ -23,6 +34,7 @@ function NewEvent() {
     const handleTrack = e => setTrackName(e.target.value)
     const handleRounds = e => setNoOfRounds(e.target.value)
     const handleHeats = e => setNoOfHeats(e.target.value)
+    const handleDate = e => setDate(e.target.value)
     
     const handleDriverCheck = e => {
         const arr = [...selectedDrivers]
@@ -30,10 +42,12 @@ function NewEvent() {
         const index = arr.indexOf(val)
         if(index > -1){
             arr.splice(index, 1)
-            setSelectedDrivers(arr)
+            setSelectedDrivers(arr.sort())
         } else {
-            setSelectedDrivers([...selectedDrivers, val])
+            const preArr = [...selectedDrivers, val]
+            setSelectedDrivers(preArr.sort())
         }
+        
     }
 
     const insertEvent = (e) => {
@@ -50,26 +64,32 @@ function NewEvent() {
                     trackName,
                     noOfRounds,
                     noOfHeats,
-                    selectedDrivers
+                    selectedDrivers,
+                    date
                 })
             })
             .then(response => response.json())
+            .then(() => {
+                setTimeout(() => {
+                    fetchEmptyRaces()
+                }, 1500)
+            })
+            .then(() => setNewEventToggle(false))
     }
 
     return (
         <Fragment>
-            <h2>Add a new event</h2>
-            <form onSubmit={insertEvent}>
+            <EventForm onSubmit={insertEvent}>
                 <InlineFieldset>
-                <FormSubtitle>Season</FormSubtitle>
-                { 
-                    seasons.map((season, index) => 
-                        <div key={season.id} onChange={handleSeason}>
-                            <Radio type="radio" name="season" id={season.year} data-id={season.id} value={season.year} />
-                            <RadioLabel htmlFor={season.year}>{season.year}</RadioLabel>
-                        </div>
-                    )
-                }
+                    <FormSubtitle>Season</FormSubtitle>
+                    { 
+                        seasons.map((season, index) => 
+                            <div key={season.id} onChange={handleSeason}>
+                                <Radio type="radio" name="season" id={season.year} data-id={season.id} value={season.year} />
+                                <RadioLabel htmlFor={season.year}>{season.year}</RadioLabel>
+                            </div>
+                        )
+                    }
                 </InlineFieldset>
                 <InlineFieldset>
                     <FormSubtitle>Round</FormSubtitle>
@@ -79,22 +99,23 @@ function NewEvent() {
                     <Input id="trackname" type="text" placeholder="eg. Llandow" onChange={handleTrack} />
                     <Label htmlFor="rounds">Number of heats</Label>
                     <Input id="rounds" type="number" min="0" max="20" placeholder="0" onChange={handleHeats} />
-                    <Fieldset>
-                        <Legend>Who is taking part?</Legend>
-                        { 
-                            drivers.map(driver => 
-                            <div key={driver.id}>
-                                <input type="checkbox" id={driver.id} value={driver.id} onChange={handleDriverCheck}></input>
-                                <label htmlFor={driver.id}>{driver.first_name} {driver.last_name}</label>
-                            </div>
-                            )
-                        }
-                   </Fieldset>
-
+                    <Label htmlFor="date">Date</Label>
+                    <Input id="date" type="date" onChange={handleDate} />
 
                 </InlineFieldset>
-                <button type="submit">add event</button>
-            </form>
+                <InlineFieldset>
+                    <FormSubtitle>Drivers</FormSubtitle>
+                    { 
+                        drivers.map(driver => 
+                        <DriverCheckbox key={driver.id}>
+                            <input type="checkbox" id={driver.id} value={driver.id} onChange={handleDriverCheck}></input>
+                            <label htmlFor={driver.id}>{driver.first_name} {driver.last_name}</label>
+                        </DriverCheckbox>
+                        )
+                    }
+                </InlineFieldset>
+                <AddButton type="submit" onClick={(e) => insertEvent(e)}>Save event</AddButton>
+            </EventForm>
         </Fragment>
     )
 }

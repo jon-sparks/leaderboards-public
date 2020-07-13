@@ -1,22 +1,21 @@
 import styled from 'styled-components';
+import { motion } from 'framer-motion'
 
-const blue = 'rgba(80,207,224,1)';
+export const blue = 'rgba(80,207,224,1)';
 export const slate = 'rgba(53,67,93,1)';
 
 export const Table = styled.table`
 border-collapse: collapse;
 overflow: hidden;
 background: white;
-box-shadow: 0 0 9px -5px rgba(0,0,0,0.3);
 margin-bottom: 30px;
 
     thead {
-        background: ${slate};
-        color: white;
+        color: ${slate};
         text-align: left;
 
         tr {
-            box-shadow: 0px 0px 15px -6px rgba(0,0,0,0.75);
+            border-bottom: solid 1px lightgrey;
 
             th {
                 padding: 10px 20px;
@@ -26,7 +25,11 @@ margin-bottom: 30px;
     tbody {
 
         tr {
-            border-bottom: solid 1px lightgrey;
+
+            &:nth-child(2n+2) {
+                background: #f7f7f7;
+            }
+
             td {
                 padding: 10px 20px;
             }
@@ -85,23 +88,21 @@ export const FormItem = styled.div`
 `
 
 export const AddButton = styled.button`
-    background: none;
+    background: ${slate};
+    color: white;
     border: none;
     font-size: 18px;
-    padding: 20px;
+    padding: 10px 30px;
     cursor: pointer;
+    border-radius: 30px;
+    font-family: exo;
+    font-weight: bold;
+    font-style: italic;
+    box-shadow: 0 5px 10px -5px rgba(0,0,0,0.4);
+    transition: color ease 0.3s;
 
-    &::before {
-        content: '+';
-        margin-right: 10px;
-        display: inline-flex;
-        justify-content: center;
-        align-items: center;
-        width: 25px;
-        height: 25px;
-        border-radius: 50%;
-        color: white;
-        background: rgba(80, 207, 224, 1);
+    &:hover {
+        color: ${blue};
     }
 `
 
@@ -116,21 +117,55 @@ export const InlineList = styled.ul`
 export const ToggleButton = styled.button`
     position: relative;
     border: none;
-    background: none;
+    background: #35435d;
+    color: white;
     padding: 10px 20px;
+    border-radius: 20px;
     cursor: pointer;
+    margin-right: 10px;
+    font-family: exo;
+    font-weight: bold;
+    font-style: italic;
+    text-transform: uppercase;
 
     &:focus {
         outline: none;
     }
 
     &.active {
-        border-bottom: solid 2px #50cfe0;
+        border-bottom: solid 2px ${blue};
+        color: ${blue};
     }
 `
 
-export const StyledModal = styled.div`
+export const ModalBox = styled(motion.div)`
+    position: relative;
+    overflow: hidden;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 10px -5px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+
+    .modal-close {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: none;
+        border: none;
+        cursor: pointer;
+
+        svg {
+            width: 20px;
+            fill: white;
+        }
+    }
+`
+
+export const StyledModal = styled(motion.div)`
     position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
     background: rgba(0,0,0,0.3);
@@ -139,29 +174,6 @@ export const StyledModal = styled.div`
     justify-content: center;
     align-items: center;
 
-    > div {
-        position: relative;
-        overflow: hidden;
-        background: white;
-        border-radius: 15px;
-        box-shadow: 0 5px 10px -5px rgba(0,0,0,0.3);
-        display: flex;
-        flex-direction: column;
-
-        .modal-close {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: none;
-            border: none;
-            cursor: pointer;
-
-            svg {
-                width: 20px;
-                fill: white;
-            }
-        }
-    }
     .top {
         position: relative;
         height: 167px;
@@ -193,6 +205,20 @@ export const StyledModal = styled.div`
     .bottom {
         position: relative;
         padding: 30px;
+    }
+`
+
+export const RaceModalDiv = styled(StyledModal)`
+    
+    > div {
+        position: relative;
+        padding: 30px;
+        font-family: exo;
+        font-weight: bold;
+        font-style: italic;
+        color: ${slate};
+        background: white;
+        border-radius: 10px;
     }
 `
 
@@ -265,19 +291,28 @@ export const FlexRow = styled.div`
     display: flex;
     flex-direction: row;
     margin: 0 -10px 30px -10px;
+    align-items: flex-start;
 
     > * {
         margin: 0 10px;
     }
 `
 
+export const TableWrapper = styled.div`
+    background: white;
+    border-radius: 10px;
+    padding: 25px 15px 0 15px;
+    box-shadow: 0 5px 10px -5px rgba(0,0,0,0.4);
+`
+
 export const TableTitle = styled.h2`
     font-family: Exo;
     font-style: italic;
-    font-size: 25px;
+    font-size: 20px;
     font-weight: bold;
     color: ${slate};
     text-transform: uppercase;
+    margin-bottom: 20px;
 `
 
 export const Fieldset = styled.fieldset`
@@ -287,9 +322,6 @@ export const Fieldset = styled.fieldset`
 `
 export const InlineFieldset = styled(Fieldset)`
     display: inline-block;
-    vertical-align: top;
-    padding: 25px;
-    padding-left: 0;
 `
 
 export const Label = styled.label`
@@ -300,6 +332,17 @@ export const Label = styled.label`
     color: ${slate};
     font-weight: bold;
     font-size: 20px;
+`
+
+export const EventForm = styled.form`
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    padding: 25px 0;
+
+    fieldset {
+        margin-right: 25px;
+    }
 `
 
 export const Legend = styled(Label)``
@@ -329,4 +372,117 @@ export const RadioLabel = styled.label`
     font-size: 20px;
     color: ${slate};
     padding: 10px;
+`
+
+export const DriverCheckbox = styled.div`
+
+    label {
+        font-family: exo;
+        font-weight: bold;
+        font-style: italic;
+        font-size: 16px;
+        margin-left: 5px;
+        color: ${slate};
+    }
+`
+
+export const DriverWrapper = styled.div`
+    padding: 0 5px;
+    margin: 25px 0;
+
+    span {
+        position: relative;
+        display: inline-block;
+        font-size: 18px;
+        font-weight: bold;
+        font-style: italic;
+        font-family: exo;
+        color: ${slate};
+        margin-right: 10px;
+        min-width: 20px;
+    }
+`
+
+export const ModalClose = styled.button`
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    width: 40px;
+    height: 40px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 50%;
+    box-sizing: border-box;
+
+    &::before {
+        content: '';
+        width: 20px;
+        height: 3px;
+        background: lightgrey;
+        transform-origin: top left;
+        position: absolute;
+        left: 16px;
+        top: 10px;
+        transform: rotate(45deg);
+        transition: background ease 0.3s;
+    }
+    &::after {
+        content: '';
+        width: 20px;
+        height: 3px;
+        background: lightgrey;
+        transform-origin: top right;
+        position: absolute;
+        right: 12px;
+        top: 10px;
+        transform: rotate(-45deg);
+        transition: background ease 0.3s;
+    }
+
+    &:hover {
+        &::before, &::after {
+            background: red;
+        }
+    }
+`
+
+export const EmptyRaceContainer = styled(motion.div)`
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    margin: 20px 0 50px 0;
+`
+
+export const EmptyRaceDiv = styled(motion.div)`
+    position: relative;
+    padding: 10px;
+    margin: 3px;
+    background: white;
+    box-sizing: border-box;
+    color: ${slate};
+    cursor: pointer;
+    font-family: exo;
+    font-weight: bold;
+    font-style: italic;
+    max-width: 450px;
+
+    h3, h2 {
+        display: inline-block;
+        margin-left: 10px;
+    }
+`
+
+export const ExoH2 = styled.h2`
+    font-family: Exo;
+    font-style: italic;
+    font-size: 25px;
+    font-weight: bold;
+    color: ${slate};
+    text-transform: uppercase;
+`
+
+export const Tdc = styled.td`
+    text-align: center;
 `

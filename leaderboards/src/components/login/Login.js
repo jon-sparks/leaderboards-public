@@ -1,5 +1,5 @@
 import React, { Fragment, useState, useContext, useEffect } from 'react'
-import { AccountContext, Account } from './Accounts'
+import { AccountContext } from './Accounts'
 import { LoginForm } from '../styled/styled'
 
 function Login() {
@@ -7,7 +7,7 @@ function Login() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
 
-    const { authenticate, getSession, logout, status, setStatus, user, setUser } = useContext(AccountContext)
+    const { authenticate, getSession, logout, status, setStatus } = useContext(AccountContext)
 
     useEffect(() => {
         getSession()
@@ -17,6 +17,7 @@ function Login() {
         .catch(() => {
             console.log('not logged in!')
         })
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
   
     const login = e => {

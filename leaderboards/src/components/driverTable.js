@@ -1,44 +1,34 @@
 import React, { useState, useEffect, useContext, Fragment } from 'react'
+import Loader from 'react-loader-spinner'
 import { motion } from 'framer-motion'
-import { Table, AddButton, FlexForm, FormRow, FormItem, slate } from './styled/styled'
+import { Table, AddButton, FlexForm, FormRow, FormItem, TableWrapper, FlexRow, blue } from './styled/styled'
 import { AccountContext } from './login/Accounts'
 import { GlobalContext } from './GlobalContext'
 
 function DriverTable(props) {
 
     const { status } = useContext(AccountContext)
-    const { drivers, setDrivers } = useContext(GlobalContext)
+    const { drivers, driversLoading, removeDriverFromState, fetchDrivers, teams, teamsLoading, setTeams } = useContext(GlobalContext)
 
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
         category: 'LW',
-        team: 'No Team',
-        teamName: ''
+        team: 'No Team'
     })
     const [addDriver, setAddDriver] = useState(false)
-
-    async function fetchDrivers() {
-        await fetch(`/api/drivers`)
-            .then(response => response.json())
-            .then(data => {
-            // props.driverHandler(data)
-            setDrivers(data)
-        })
-    }
 
     async function fetchTeams() {
         await fetch(`/api/teams`)
             .then(response => response.json())
-            .then(data => {
-            props.teamHandler(data)
-        })
+            .then(data => setTeams(data))
     }
     
     useEffect(() => {
-        if(props.drivers.length < 1){
+        if(drivers.length < 1){
             fetchDrivers() 
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     const handleInputChange = e => {
@@ -58,7 +48,9 @@ function DriverTable(props) {
                 body: JSON.stringify(formData)
             })
             .then(response => response.json())
-            .then(() => fetchDrivers())
+            .then(() => setTimeout(() => {
+                fetchDrivers()
+            }, 500))
     }
 
     const deleteDriver = (driverId) => {
@@ -72,11 +64,11 @@ function DriverTable(props) {
                 body: JSON.stringify({"id":driverId})
             })
             .then(response => response.json())
-            .then(() => props.removeDriverFromState(driverId))
+            .then(() => removeDriverFromState(driverId))
     }
 
     const handleAddDriver = () => {
-        if(props.teams.length < 1){
+        if(teams.length < 1){
             fetchTeams()
         }
         setAddDriver(addDriver ? false : true)
@@ -111,62 +103,92 @@ function DriverTable(props) {
             <FormItem>
                 <label htmlFor="category">Weight Category</label>
                 <select name="category" value={formData.category} onChange={handleInputChange}>
-                    <option>LW</option>
                     <option>HW</option>
+                    <option>LW</option>
                 </select>
             </FormItem>
             <FormItem>
                 <label htmlFor="team">Team</label>
                 <select name="team" value={formData.team} onChange={handleInputChange}>
+                    <option>Select team</option>
                     {
-                        props.teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)
+                        teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)
                     }
                 </select>
             </FormItem>
         </FormRow>
 
-        <button onClick={(e) => {props.addDriver(e, formData); insertDriver(e); handleAddDriver()}}>add driver</button>
+        <AddButton onClick={(e) => { insertDriver(e); handleAddDriver()}}>Add driver</AddButton>
     </FlexForm>
     
 
     return (
         <Fragment>
 
-            <Table>
-                <thead>
-                    <tr>
-                        <th>First Name</th>
-                        <th>Last Name</th>
-                        <th>Category</th>
-                        <th>Team</th>
-                        {status ? <th></th> : ''}
-                    </tr>
-                </thead>
-                <tbody>
-                    {
-                        drivers.map((driver, index) => 
-                        <motion.tr key={driver.id} whileHover={{color: slate, backgroundColor: '#dedede'}} positionTransition>
-                            <td>{driver.first_name}</td>
-                            <td>{driver.last_name}</td>
-                            <td>{driver.category}</td>
-                            <td>{driver.team ? driver.team : 'No team'}</td>
-                            {status ?                             <td>
-                                <button
-                                    data-key={driver.id}
-                                    data-fname={driver.first_name}
-                                    data-lname={driver.last_name}
-                                    onClick={(e) => handleDelete(e)}>
-                                    Delete
-                                </button>
-                            </td> : ''}
-                        </motion.tr>)
-                    }
-                </tbody>
-            </Table>
+            <FlexRow>
+                <TableWrapper>
+                    <Table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Category</th>
+                                <th>Team</th>
+                                <th>Race wins</th>
+                                {status && <th></th>}
+                            </tr>
+                        </thead>
+                        {
+                            driversLoading ? 
+                            <tbody>
+                                <tr>
+                                    <td colSpan="5">
+                                        <Loader
+                                            type="Bars"
+                                            color={blue}
+                                            height={60}
+                                            width={80}
+                                            style={{textAlign:'center',padding:'50px'}}
+                                        /> 
+                                    </td>
+                                </tr>
+                            </tbody> :
+                            <tbody>
+                                {
+                                    drivers &&
+                                    drivers.map((driver, index) => 
+                                    <motion.tr key={driver.id} positionTransition>
+                                        <td>{driver.first_name} {driver.last_name}</td>
+                                        <td>{driver.category}</td>
+                                        <td>{driver.team ? driver.team : 'No team'}</td>
+                                        <td style={{textAlign:'center'}}>{driver.total_wins ? driver.total_wins : '0'}</td>
+                                        {
+                                            status &&
+                                            <td>
+                                                <button
+                                                    data-key={driver.id}
+                                                    data-fname={driver.first_name}
+                                                    data-lname={driver.last_name}
+                                                    onClick={(e) => handleDelete(e)}>
+                                                    Delete
+                                                </button>
+                                            </td>
+                                        }
+                                    </motion.tr>)
+                                }
+                            </tbody>
+                        }
 
-            <AddButton onClick={handleAddDriver}>
-                Add a driver
-            </AddButton>
+                    </Table>
+                </TableWrapper>
+            </FlexRow>
+            
+            {
+                status &&
+                <AddButton onClick={handleAddDriver}>
+                    Add a driver
+                </AddButton>
+            }
+
             
             {addDriver
                 ? driverForm

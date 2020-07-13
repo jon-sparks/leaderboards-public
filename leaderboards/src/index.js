@@ -4,11 +4,14 @@ import './index.css';
 import App from './App';
 import * as serviceWorker from './serviceWorker';
 import { GlobalProvider } from './components/GlobalContext';
+import { Account } from './components/login/Accounts'
 
 ReactDOM.render(
   <React.StrictMode>
     <GlobalProvider>
-      <App />
+      <Account>
+        <App />
+      </Account>
     </GlobalProvider>
   </React.StrictMode>,
   document.getElementById('root')
